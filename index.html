@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<title>入職報到</title>
+</head>
+
+<body>
+<section>
+    <h1>入職報到</h1>
+
+    <!-- 上傳按鈕 -->
+    <div class="toolbar">
+    <input type="text" id="titleInput" maxlength="30" placeholder="輸入照片名稱（可留空）">
+    <label class="upload-btn">
+        ＋ 上傳照片
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+    </label>
+</div>
+
+    <!-- 照片牆：原本的卡片 + 上傳的卡片都放這裡 -->
+    <div class="gallery" id="gallery">
+    <article><a href="images/ff12.jpg" target="_blank"><img src="images/ff12.jpg" alt="範例圖片"><p>小明</p></a></article>
+</div>
+</section>
+
+<script>
+const gallery = document.getElementById('gallery');
+const fileInput = document.getElementById('fileInput');
+const titleInput = document.getElementById('titleInput');
+const uploadLabel = document.querySelector('.upload-btn');
+
+/* 檔名 "1730000000000-夕陽.jpg" → 說明文字 "夕陽" */
+function captionFrom(pathname) {
+    return pathname
+        .replace(/^memories\//, '')
+        .replace(/^\d+-/, '')
+        .replace(/\.[^.]+$/, '');
+}
+
+function addCard({ url, name }) {
+    const card = document.createElement('article');
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';        // 開新分頁
+    link.rel = 'noopener';
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = captionFrom(name);
+    img.loading = 'lazy';
+
+    const p = document.createElement('p');
+    p.textContent = captionFrom(name);
+
+    link.append(img, p);
+    card.append(link);
+    gallery.append(card);
+}
+
+/* 上傳前先縮圖：長邊最多 1600px，避開 Vercel 4.5MB 的請求上限 */
+async function shrink(file, maxSide = 1600) {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+}
+
+fileInput.addEventListener('change', async (e) => {
+    const files = [...e.target.files].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+
+    const typed = titleInput.value.trim();   // 在迴圈外讀一次
+    uploadLabel.classList.add('busy');
+
+    for (const file of files) {
+        try {
+            const blob = await shrink(file);
+            const base = typed || file.name.replace(/\.[^.]+$/, '');
+            const name = base + '.jpg';
+
+            const res = await fetch('/api/upload?filename=' + encodeURIComponent(name), {
+                method: 'POST',
+                headers: { 'Content-Type': 'image/jpeg' },
+                body: blob,
+            });
+            if (!res.ok) throw new Error((await res.json()).error || res.status);
+            addCard(await res.json());
+        } catch (err) {
+            alert('上傳失敗：' + file.name + '\n' + err.message);
+        }
+    }
+
+    uploadLabel.classList.remove('busy');
+    titleInput.value = '';
+    e.target.value = '';
+});
+
+/* 載入所有人上傳過的照片 */
+(async () => {
+    try {
+        const res = await fetch('/api/photos');
+        (await res.json()).forEach(addCard);
+    } catch (err) {
+        console.error('載入照片牆失敗', err);
+    }
+})();
+</script>
+</body>
+</html>
