@@ -75,14 +75,14 @@ h1 {
 
 /* ---------- 照片牆：自動換行的網格 ---------- */
 .gallery {
-    column-width: 260px;     /* 每欄至少 260px，自動換欄 */
+    column-width: 200px;
     column-gap: 20px;
 }
 
 .gallery article {
-    break-inside: avoid;     /* 卡片不會被切成兩半 */
-    margin-bottom: 20px;
     display: block;
+    break-inside: avoid;
+    margin-bottom: 20px;
 }
 
 a {
@@ -118,10 +118,9 @@ article > a,
 }
 
 article img {
+    display: block;
     width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: contain;     /* 完整顯示，留空白 */
-    background: rgba(0, 0, 0, 0.3);
+    height: auto;            /* 依原圖比例，完整顯示 */
     margin-bottom: 15px;
     border-radius: 10px;
 }

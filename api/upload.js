@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const safe = raw.replace(/[^\w\u4e00-\u9fff.\- ]/g, '').slice(0, 60) || 'photo.jpg';
 
   try {
-    const blob = await put(`memories/${Date.now()}-${safe}`, req, {
+    const blob = await put(`vertical/${Date.now()}-${safe}`, req, {
       access: 'public',
       contentType: type,
     });
